@@ -38,29 +38,18 @@ jobs:
       - run:
           name: 'Creating Virtualenv'
           command: virtualenv venv
-      - restore_cache:
-          key:
-            sceptre-{{ .Environment.CACHE_VERSION }}-requirements-{{ arch }}-{{
-            checksum "requirements/prod.txt" }}-{{ checksum
-            "requirements/dev.txt" }}
       - run:
           name: 'Installing Requirements'
           command: |
             . ./venv/bin/activate
-            pip install -r requirements/prod.txt
-            pip install -r requirements/dev.txt
+            make install-dev
       - save_cache:
           key:
             sceptre-{{ .Environment.CACHE_VERSION }}-requirements-{{ arch }}-{{
             checksum "requirements/prod.txt" }}-{{ checksum
-            "requirements/dev.txt" }}
+            "requirements/dev.txt" }}-{{ checksum "tox.ini" }}
           paths:
             - venv
-      - run:
-          name: 'Installing Sceptre'
-          command: |
-            . ./venv/bin/activate
-            pip install .
       - persist_to_workspace:
           root: /home/circleci
           paths:
@@ -74,36 +63,26 @@ jobs:
           at: /home/circleci
       - restore_cache:
           key:
-            sceptre-{{ .Environment.CACHE_VERSION }}-tox-requirements-{{ arch
-            }}-{{ checksum "requirements/prod.txt" }}-{{ checksum
-            "requirements/dev.txt" }} -{{ checksum "tox.ini" }}
+            sceptre-{{ .Environment.CACHE_VERSION }}-requirements-{{ arch }}-{{
+            checksum "requirements/prod.txt" }}-{{ checksum
+            "requirements/dev.txt" }}-{{ checksum "tox.ini" }}
       - run:
           name: 'Linting'
           command: |
             . ./venv/bin/activate
             make lint
-
       - run:
           name: 'Unit Test'
           command: |
+            . ./venv/bin/activate
             make test-all
-
       - store_test_results:
           path: coverage.xml
           destination: coverage-reports
-
       - persist_to_workspace:
           root: /home/circleci
           paths:
             - project
-
-      - save_cache:
-          key:
-            sceptre-{{ .Environment.CACHE_VERSION }}-tox-requirements-{{ arch
-            }}-{{ checksum "requirements/prod.txt" }}-{{ checksum
-            "requirements/dev.txt" }}-{{ checksum "tox.ini" }}
-          paths:
-            - .tox
 
   integration-tests:
     parallelism: 2
@@ -114,6 +93,11 @@ jobs:
     steps:
       - attach_workspace:
           at: /home/circleci
+      - restore_cache:
+          key:
+            sceptre-{{ .Environment.CACHE_VERSION }}-requirements-{{ arch }}-{{
+            checksum "requirements/prod.txt" }}-{{ checksum
+            "requirements/dev.txt" }}-{{ checksum "tox.ini" }}
       - run:
           name: 'Integration Testing'
           command: |
